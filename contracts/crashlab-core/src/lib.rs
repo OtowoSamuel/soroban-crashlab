@@ -17,6 +17,8 @@ pub use seed_validator::{SeedSchema, SeedValidationError, Validate};
 
 pub mod scheduler;
 pub use scheduler::{Mutator, SchedulerError, WeightedScheduler};
+pub mod replay;
+pub use replay::{ReplayResult, replay_seed_bundle};
 
 pub mod env_fingerprint;
 pub use env_fingerprint::{
@@ -158,6 +160,12 @@ pub fn to_bundle_with_environment(seed: CaseSeed) -> CaseBundle {
     }
 }
 
+pub fn signatures_match(expected: &CrashSignature, actual: &CrashSignature) -> bool {
+    expected.category == actual.category
+        && expected.digest == actual.digest
+        && expected.signature_hash == actual.signature_hash
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -288,5 +296,26 @@ mod tests {
         let hash_a = compute_signature_hash("runtime-failure", &[1, 2, 3]);
         let hash_b = compute_signature_hash("runtime-failure", &[3, 2, 1]);
         assert_ne!(hash_a, hash_b);
+    }
+
+    #[test]
+    fn signatures_match_requires_category_digest_and_signature_hash() {
+        let expected = CrashSignature {
+            category: "runtime-failure",
+            digest: 11,
+            signature_hash: 22,
+        };
+        let same = CrashSignature {
+            category: "runtime-failure",
+            digest: 11,
+            signature_hash: 22,
+        };
+        let different_digest = CrashSignature {
+            category: "runtime-failure",
+            digest: 99,
+            signature_hash: 22,
+        };
+        assert!(signatures_match(&expected, &same));
+        assert!(!signatures_match(&expected, &different_digest));
     }
 }
