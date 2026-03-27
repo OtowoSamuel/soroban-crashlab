@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import RunHistoryTable from './RunHistoryTable';
 import Pagination from './Pagination';
@@ -39,6 +39,7 @@ const ITEMS_PER_PAGE = 10;
 const CPU_WARNING = 900_000;
 const MEMORY_WARNING = 7_000_000;
 const FEE_WARNING = 3_000;
+const STATUS_OPTIONS: Array<'all' | RunStatus> = ['all', 'running', 'completed', 'failed', 'cancelled'];
 
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
@@ -53,6 +54,44 @@ const isExpensiveRun = (run: FuzzingRun): boolean =>
   run.memoryBytes >= MEMORY_WARNING ||
   run.minResourceFee >= FEE_WARNING;
 
+const toStableQueryString = (params: URLSearchParams): string => {
+  const sorted = Array.from(params.entries()).sort(([a], [b]) => a.localeCompare(b));
+  return new URLSearchParams(sorted).toString();
+};
+
+const buildMockRuns = () =>
+  Array.from({ length: 25 }, (_, i) => {
+    const id = 1000 + i;
+    const status = (['completed', 'failed', 'running', 'cancelled'][i % 4]) as RunStatus;
+
+    return {
+      id: `run-${id}`,
+      status,
+      duration: 120_000 + i * 95_000,
+      seedCount: 10_000 + i * 1_250,
+      cpuInstructions: 450_000 + i * 28_500,
+      memoryBytes: 1_800_000 + i * 230_000,
+      minResourceFee: 600 + i * 170,
+      crashDetail:
+        status === 'failed'
+          ? {
+              failureCategory: i % 2 === 0 ? 'Panic' : 'InvariantViolation',
+              signature: `sig:${id}:contract::transfer:assert_balance_nonnegative`,
+              payload: JSON.stringify(
+                {
+                  contract: 'token',
+                  method: 'transfer',
+                  args: { from: 'GABCD...1234', to: 'GXYZ...7890', amount: 999999999 },
+                },
+                null,
+                2,
+              ),
+              replayAction: `cargo run --bin crash-replay -- --run-id run-${id}`,
+            }
+          : null,
+    };
+  }).reverse() as unknown as FuzzingRun[];
+
 function HomeContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -61,50 +100,106 @@ function HomeContent() {
   const [selectedCardIndex, setSelectedCardIndex] = useState(0);
   const [showDetailView, setShowDetailView] = useState(false);
   const [showHelp, setShowHelp] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const cardsContainerRef = useRef<HTMLDivElement>(null);
+
   const selectedRunId = searchParams.get('run');
-  const selectedRun = selectedRunId ? runs.find((run) => run.id === selectedRunId) : null;
+  const statusFilter = STATUS_OPTIONS.includes((searchParams.get('status') ?? 'all') as 'all' | RunStatus)
+    ? ((searchParams.get('status') ?? 'all') as 'all' | RunStatus)
+    : 'all';
+  const expensiveOnly = searchParams.get('expensive') === '1';
+  const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10);
+  const currentPage = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
-  const totalPages = Math.ceil(runs.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedRuns = runs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  const expensiveRuns = paginatedRuns.filter(isExpensiveRun);
+  const setQueryState = useCallback(
+    (updates: Record<string, string | null>) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
 
-  const updateSelectedRunInUrl = useCallback(
-    (runId: string | null) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (runId) {
-        params.set('run', runId);
-      } else {
-        params.delete('run');
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null || value === '') {
+          nextParams.delete(key);
+          return;
+        }
+        nextParams.set(key, value);
+      });
+
+      const query = toStableQueryString(nextParams);
+      const nextUrl = query ? `${pathname}?${query}` : pathname;
+      const currentQuery = toStableQueryString(new URLSearchParams(searchParams.toString()));
+      const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
+      if (nextUrl !== currentUrl) {
+        router.replace(nextUrl, { scroll: false });
       }
-      const query = params.toString();
-      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
-    [router, pathname, searchParams],
+    [pathname, router, searchParams],
   );
+
+  const filteredRuns = useMemo(() => {
+    return runs.filter((run) => {
+      if (statusFilter !== 'all' && run.status !== statusFilter) {
+        return false;
+      }
+      if (expensiveOnly && !isExpensiveRun(run)) {
+        return false;
+      }
+      return true;
+    });
+  }, [runs, statusFilter, expensiveOnly]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRuns.length / ITEMS_PER_PAGE));
+  const clampedPage = Math.min(currentPage, totalPages);
+  const startIndex = (clampedPage - 1) * ITEMS_PER_PAGE;
+  const paginatedRuns = filteredRuns.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const expensiveRuns = paginatedRuns.filter(isExpensiveRun);
+  const selectedRun = selectedRunId ? runs.find((run) => run.id === selectedRunId) ?? null : null;
+
+  useEffect(() => {
+    if (selectedRunId && !selectedRun) {
+      setQueryState({ run: null });
+    }
+  }, [selectedRun, selectedRunId, setQueryState]);
+
+  useEffect(() => {
+    if (currentPage !== clampedPage) {
+      setQueryState({ page: clampedPage === 1 ? null : String(clampedPage) });
+    }
+  }, [clampedPage, currentPage, setQueryState]);
 
   const handleOpenRunDrawer = useCallback(
-    (runId: string) => updateSelectedRunInUrl(runId),
-    [updateSelectedRunInUrl],
+    (runId: string) => setQueryState({ run: runId }),
+    [setQueryState],
   );
-  const handleCloseRunDrawer = useCallback(() => updateSelectedRunInUrl(null), [updateSelectedRunInUrl]);
+
+  const handleCloseRunDrawer = useCallback(() => setQueryState({ run: null }), [setQueryState]);
 
   const handleReplayComplete = useCallback((newRun: FuzzingRun) => {
     setRuns((prev) => [newRun, ...prev]);
   }, []);
 
-  useEffect(() => {
-    if (selectedRunId && !selectedRun) {
-      router.replace(pathname);
-    }
-  }, [selectedRunId, selectedRun, router, pathname]);
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setQueryState({ page: page <= 1 ? null : String(page) });
+      cardsContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    [setQueryState],
+  );
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    cardsContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const handleCopyPermalink = useCallback(async () => {
+    try {
+      const stableQuery = toStableQueryString(new URLSearchParams(searchParams.toString()));
+      const permalink = `${window.location.origin}${pathname}${stableQuery ? `?${stableQuery}` : ''}`;
+      await navigator.clipboard.writeText(permalink);
+      setCopyState('copied');
+    } catch {
+      setCopyState('failed');
+    }
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    if (copyState === 'idle') return;
+    const timer = window.setTimeout(() => setCopyState('idle'), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
 
   const cards = [
     {
@@ -327,10 +422,56 @@ function HomeContent() {
       <div className="w-full mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Recent Fuzzing Runs</h2>
-          <div className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-medium text-zinc-500">
-            {runs.length} Total Runs
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCopyPermalink}
+              className="px-3 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-900 transition"
+            >
+              Copy report link
+            </button>
+            <div className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-medium text-zinc-500">
+              {filteredRuns.length} Matching Runs
+            </div>
           </div>
         </div>
+
+        <div className="mb-4 flex flex-col md:flex-row md:items-center gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-zinc-600 dark:text-zinc-400">Status</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setQueryState({ status: e.target.value === 'all' ? null : e.target.value, page: null })}
+              className="rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              checked={expensiveOnly}
+              onChange={(e) => setQueryState({ expensive: e.target.checked ? '1' : null, page: null })}
+              className="h-4 w-4 rounded border-zinc-300"
+            />
+            Only expensive runs
+          </label>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Shared links preserve page, selected run, and filters.
+          </p>
+        </div>
+
+        {copyState === 'copied' && (
+          <p className="mb-3 text-sm text-green-700 dark:text-green-400">Permalink copied to clipboard.</p>
+        )}
+        {copyState === 'failed' && (
+          <p className="mb-3 text-sm text-red-700 dark:text-red-400">Could not copy link. Copy the URL from your browser address bar.</p>
+        )}
+
         <div className="mb-5 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 bg-amber-50/70 dark:bg-amber-950/20">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">Resource Fee Insight</h3>
@@ -359,7 +500,7 @@ function HomeContent() {
         </div>
         <RunHistoryTable runs={paginatedRuns} onSelectRun={handleOpenRunDrawer} />
         <Pagination
-          currentPage={currentPage}
+          currentPage={clampedPage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
         />
@@ -422,6 +563,7 @@ function HomeContent() {
 
       {selectedRun && (
         <CrashDetailDrawer
+          key={selectedRun.id}
           run={selectedRun}
           onClose={handleCloseRunDrawer}
           onReplayComplete={handleReplayComplete}
