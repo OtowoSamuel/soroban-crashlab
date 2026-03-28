@@ -2,10 +2,12 @@ pub mod auth_matrix;
 pub mod health;
 pub mod prng;
 pub mod reproducer;
+pub mod retry;
 pub mod taxonomy;
 
 pub use auth_matrix::{AuthMode, MatrixReport, ModeResult, collect_mismatched, run_matrix};
 pub use prng::SeededPrng;
+pub use retry::{RetryConfig, SimulationError, execute_with_retry};
 pub use health::{
     FailureMetrics, HealthMonitor, HealthStatus, HealthSummary, QueueMetrics, ThroughputMetrics,
 };

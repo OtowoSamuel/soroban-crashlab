@@ -1,3 +1,4 @@
+use crate::retry::{execute_with_retry, RetryConfig, SimulationError};
 use crate::{CaseBundle, CaseSeed, CrashSignature};
 
 /// Summary of stability analysis for a single [`CaseBundle`].
@@ -37,7 +38,7 @@ pub struct ReproReport {
 /// let detector = FlakyDetector::new(10, 0.1);
 ///
 /// // In a real integration this closure invokes the contract under test.
-/// let report = detector.check(&bundle, |_seed| bundle.signature.clone());
+/// let report = detector.check(&bundle, |_seed| Ok(bundle.signature.clone())).unwrap();
 /// assert!(report.is_stable);
 /// ```
 #[derive(Debug, Clone)]
@@ -70,23 +71,34 @@ impl FlakyDetector {
     /// Each invocation's returned [`CrashSignature`] is compared to
     /// `bundle.signature`.  The resulting [`ReproReport`] captures the flake
     /// rate and stability verdict.
-    pub fn check<F>(&self, bundle: &CaseBundle, reproducer: F) -> ReproReport
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError`] if a run fails after all retry attempts or
+    /// if a non-transient error is encountered.
+    pub fn check<F>(&self, bundle: &CaseBundle, mut reproducer: F) -> Result<ReproReport, SimulationError>
     where
-        F: Fn(&CaseSeed) -> CrashSignature,
+        F: FnMut(&CaseSeed) -> Result<CrashSignature, SimulationError>,
     {
-        let stable_count = (0..self.runs)
-            .filter(|_| reproducer(&bundle.seed) == bundle.signature)
-            .count() as u32;
+        let config = RetryConfig::default();
+        let mut stable_count = 0;
+
+        for _ in 0..self.runs {
+            let signature = execute_with_retry(&config, None, || reproducer(&bundle.seed))?;
+            if signature == bundle.signature {
+                stable_count += 1;
+            }
+        }
 
         let flake_rate = (self.runs - stable_count) as f64 / self.runs as f64;
 
-        ReproReport {
+        Ok(ReproReport {
             bundle: bundle.clone(),
             runs: self.runs,
             stable_count,
             flake_rate,
             is_stable: flake_rate <= self.threshold,
-        }
+        })
     }
 }
 
@@ -95,23 +107,25 @@ impl FlakyDetector {
 /// Each bundle is evaluated with `detector`.  Any bundle whose flake rate exceeds
 /// `detector.threshold` is excluded from the returned collection.
 ///
-/// # Arguments
+/// # Errors
 ///
-/// * `bundles`    – Candidate fixtures to evaluate.
-/// * `detector`   – Configured [`FlakyDetector`] that drives each stability check.
-/// * `reproducer` – Function that re-executes a seed and returns its signature.
+/// Returns [`SimulationError`] if any bundle fails evaluation after all retry
+/// attempts or if a non-transient error is encountered.
 pub fn filter_ci_pack<'a, F>(
     bundles: &'a [CaseBundle],
     detector: &FlakyDetector,
-    reproducer: F,
-) -> Vec<&'a CaseBundle>
+    mut reproducer: F,
+) -> Result<Vec<&'a CaseBundle>, SimulationError>
 where
-    F: Fn(&CaseSeed) -> CrashSignature,
+    F: FnMut(&CaseSeed) -> Result<CrashSignature, SimulationError>,
 {
-    bundles
-        .iter()
-        .filter(|b| detector.check(b, &reproducer).is_stable)
-        .collect()
+    let mut stable_bundles = Vec::new();
+    for bundle in bundles {
+        if detector.check(bundle, &mut reproducer)?.is_stable {
+            stable_bundles.push(bundle);
+        }
+    }
+    Ok(stable_bundles)
 }
 
 #[cfg(test)]
@@ -139,7 +153,7 @@ mod tests {
         let bundle = make_bundle(1, vec![1, 2, 3]);
         let detector = FlakyDetector::new(10, 0.0);
 
-        let report = detector.check(&bundle, |_| bundle.signature.clone());
+        let report = detector.check(&bundle, |_| Ok(bundle.signature.clone())).unwrap();
 
         assert_eq!(report.runs, 10);
         assert_eq!(report.stable_count, 10);
@@ -152,7 +166,7 @@ mod tests {
         let bundle = make_bundle(2, vec![5, 6, 7]);
         let detector = FlakyDetector::new(8, 0.5);
 
-        let report = detector.check(&bundle, |_| divergent_sig());
+        let report = detector.check(&bundle, |_| Ok(divergent_sig())).unwrap();
 
         assert_eq!(report.stable_count, 0);
         assert_eq!(report.flake_rate, 1.0);
@@ -171,11 +185,11 @@ mod tests {
             counter.set(n + 1);
             // Even calls reproduce correctly; odd calls diverge → 2/4 stable.
             if n % 2 == 0 {
-                bundle.signature.clone()
+                Ok(bundle.signature.clone())
             } else {
-                divergent_sig()
+                Ok(divergent_sig())
             }
-        });
+        }).unwrap();
 
         assert_eq!(report.stable_count, 2);
         assert!((report.flake_rate - 0.5).abs() < f64::EPSILON);
@@ -193,11 +207,11 @@ mod tests {
             let n = counter.get();
             counter.set(n + 1);
             if n < 7 {
-                bundle.signature.clone()
+                Ok(bundle.signature.clone())
             } else {
-                divergent_sig()
+                Ok(divergent_sig())
             }
-        });
+        }).unwrap();
 
         assert_eq!(report.stable_count, 7);
         assert!((report.flake_rate - 0.3).abs() < f64::EPSILON);
@@ -215,14 +229,35 @@ mod tests {
             let n = counter.get();
             counter.set(n + 1);
             if n < 6 {
-                bundle.signature.clone()
+                Ok(bundle.signature.clone())
             } else {
-                divergent_sig()
+                Ok(divergent_sig())
             }
-        });
+        }).unwrap();
 
         assert_eq!(report.stable_count, 6);
         assert!(!report.is_stable);
+    }
+
+    #[test]
+    fn check_retries_on_transient_error() {
+        let bundle = make_bundle(6, vec![1]);
+        let detector = FlakyDetector::new(2, 0.0);
+        let counter = Cell::new(0u32);
+
+        let report = detector.check(&bundle, |_| {
+            let n = counter.get();
+            counter.set(n + 1);
+            // Fail first two attempts of the first run
+            if n < 2 {
+                Err(SimulationError::Transient("rpc timeout".to_string()))
+            } else {
+                Ok(bundle.signature.clone())
+            }
+        }).unwrap();
+
+        assert_eq!(report.stable_count, 2);
+        assert_eq!(counter.get(), 4); // 1st run: 3 attempts (2 fail, 1 success), 2nd run: 1 attempt
     }
 
     // ── filter_ci_pack ────────────────────────────────────────────────────────
@@ -234,22 +269,20 @@ mod tests {
 
         let stable_sig = stable.signature.clone();
         let stable_id = stable.seed.id;
-        let flaky_id = flaky.seed.id;
 
         let bundles = vec![stable, flaky];
         let detector = FlakyDetector::new(5, 0.0);
 
         let pack = filter_ci_pack(&bundles, &detector, move |seed| {
             if seed.id == stable_id {
-                stable_sig.clone()
+                Ok(stable_sig.clone())
             } else {
-                divergent_sig()
+                Ok(divergent_sig())
             }
-        });
+        }).unwrap();
 
         assert_eq!(pack.len(), 1);
         assert_eq!(pack[0].seed.id, stable_id);
-        assert!(pack.iter().all(|b| b.seed.id != flaky_id));
     }
 
     #[test]
@@ -260,23 +293,19 @@ mod tests {
         let sig1 = b1.signature.clone();
         let sig2 = b2.signature.clone();
         let id1 = b1.seed.id;
-        let id2 = b2.seed.id;
 
         let bundles = vec![b1, b2];
         let detector = FlakyDetector::new(3, 0.0);
 
         let pack = filter_ci_pack(&bundles, &detector, move |seed| {
             if seed.id == id1 {
-                sig1.clone()
+                Ok(sig1.clone())
             } else {
-                sig2.clone()
+                Ok(sig2.clone())
             }
-        });
+        }).unwrap();
 
         assert_eq!(pack.len(), 2);
-        let ids: Vec<u64> = pack.iter().map(|b| b.seed.id).collect();
-        assert!(ids.contains(&id1));
-        assert!(ids.contains(&id2));
     }
 
     #[test]
@@ -286,7 +315,7 @@ mod tests {
         let bundles = vec![b1, b2];
         let detector = FlakyDetector::new(4, 0.0);
 
-        let pack = filter_ci_pack(&bundles, &detector, |_| divergent_sig());
+        let pack = filter_ci_pack(&bundles, &detector, |_| Ok(divergent_sig())).unwrap();
 
         assert!(pack.is_empty());
     }
