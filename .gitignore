@@ -15,4 +15,5 @@ apps/web/.next/
 .agents/
 .claude/
 issue.md
+AGENTS.md
 skills-lock.json
