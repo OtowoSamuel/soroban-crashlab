@@ -38,6 +38,7 @@ import AddExportRunJson from './add-export-run-json';
 import AddExportRunCsv from './add-export-run-csv';
 import IntegrateWebhookManagerForRunEvents from './integrate-webhook-manager-for-run-events';
 import AddAccessibleKeyboardNavBlueprint from './add-accessible-keyboard-nav-blueprint';
+import AddResponsiveLayoutImprovements from './add-responsive-layout-improvements';
 
 // Mock data for demonstration
 const MOCK_RUNS: FuzzingRun[] = Array.from({ length: 25 }, (_, i) => ({
@@ -340,7 +341,8 @@ function HomeContent() {
   return (
     <div className="min-h-screen w-full">
       <AddAccessibleKeyboardNavBlueprint />
-      <div id="main-content" className="flex flex-col items-center justify-center py-20 px-8 max-w-5xl mx-auto w-full">
+      <AddResponsiveLayoutImprovements />
+      <div id="main-content" className="flex flex-col items-center justify-center py-20 px-8 max-w-5xl mx-auto w-full responsive-container">
       {/* Role toggle */}
       <div className="w-full flex justify-end mb-6">
         <MaintainerToggle
@@ -359,7 +361,7 @@ function HomeContent() {
       )}
 
       <div className="text-center max-w-3xl mb-16">
-        <h1 className="text-5xl font-bold tracking-tight mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hero-title">
           Bulletproof Your Soroban Smart Contracts
         </h1>
         <p className="text-xl leading-8 text-zinc-600 dark:text-zinc-400">
