@@ -37,6 +37,7 @@ import AddRunStatusTimeline from './add-run-status-timeline';
 import AddExportRunJson from './add-export-run-json';
 import AddExportRunCsv from './add-export-run-csv';
 import IntegrateWebhookManagerForRunEvents from './integrate-webhook-manager-for-run-events';
+import AddRunTimeline from './add-run-timeline';
 
 // Mock data for demonstration
 const MOCK_RUNS: FuzzingRun[] = Array.from({ length: 25 }, (_, i) => ({
@@ -486,6 +487,7 @@ function HomeContent() {
       {dataState === 'success' && (
         <>
           <TimelineScrubber runs={runs} onSelectRun={handleOpenRunDrawer} />
+          <AddRunTimeline runs={runs} onSelectRun={handleOpenRunDrawer} />
           <div className="mt-12 w-full">
             <AddRunStatusTimeline runs={runs} />
           </div>
