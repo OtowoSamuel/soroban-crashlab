@@ -1,6 +1,7 @@
 'use client';
 
 import { FuzzingRun, RunStatus } from './types';
+import AddReplayFromUiAction from './add-replay-from-ui-action';
 
 interface RunHistoryTableProps {
     /** Array of fuzzing runs to display */
@@ -9,6 +10,8 @@ interface RunHistoryTableProps {
     onSelectRun: (runId: string) => void;
     /** Called when the report button is clicked for a run */
     onViewReport: (run: FuzzingRun) => void;
+    /** Called when a replay is initiated for a run */
+    onReplayRun?: (newRunData: { id: string; status: 'running' }) => void;
     /** List of visible columns */
     visibleColumns?: string[];
 }
@@ -53,7 +56,13 @@ const StatusBadge = ({ status }: { status: RunStatus }) => {
 /**
  * Table component for displaying a list of fuzzing runs.
  */
-export default function RunHistoryTable({ runs, onSelectRun, onViewReport, visibleColumns = ['id', 'status', 'duration', 'seedCount', 'report'] }: RunHistoryTableProps) {
+export default function RunHistoryTable({ 
+    runs, 
+    onSelectRun, 
+    onViewReport, 
+    onReplayRun,
+    visibleColumns = ['id', 'status', 'duration', 'seedCount', 'report'] 
+}: RunHistoryTableProps) {
     if (runs.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-12 border border-dashed rounded-xl bg-zinc-50 dark:bg-zinc-900/20 border-zinc-200 dark:border-zinc-800">
@@ -73,6 +82,7 @@ export default function RunHistoryTable({ runs, onSelectRun, onViewReport, visib
                             {visibleColumns.includes('status') && <th className="px-6 py-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Status</th>}
                             {visibleColumns.includes('duration') && <th className="px-6 py-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right">Duration</th>}
                             {visibleColumns.includes('seedCount') && <th className="px-6 py-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right">Seed Count</th>}
+                            {onReplayRun && <th className="px-6 py-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right">Actions</th>}
                             {visibleColumns.includes('report') && <th className="px-6 py-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-right">Report</th>}
                         </tr>
                     </thead>
@@ -117,6 +127,14 @@ export default function RunHistoryTable({ runs, onSelectRun, onViewReport, visib
                                 {visibleColumns.includes('seedCount') && (
                                     <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400 text-right tabular-nums">
                                         {run.seedCount.toLocaleString()}
+                                    </td>
+                                )}
+                                {onReplayRun && (
+                                    <td className="px-6 py-4 text-right">
+                                        <AddReplayFromUiAction 
+                                            runId={run.id} 
+                                            onReplayInitiated={onReplayRun} 
+                                        />
                                     </td>
                                 )}
                                 {visibleColumns.includes('report') && (

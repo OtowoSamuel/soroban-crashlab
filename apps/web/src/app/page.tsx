@@ -220,7 +220,24 @@ function HomeContent() {
 
   const handleCloseRunDrawer = useCallback(() => setQueryState({ run: null }), [setQueryState]);
 
-  const handleReplayComplete = useCallback((newRun: FuzzingRun) => {
+  const handleReplayComplete = useCallback((data: FuzzingRun | { id: string; status: 'running' }) => {
+    let newRun: FuzzingRun;
+    if ('area' in data) {
+      newRun = data;
+    } else {
+      newRun = {
+        id: data.id,
+        status: 'running',
+        area: 'state',
+        severity: 'medium',
+        duration: 0,
+        seedCount: 0,
+        crashDetail: null,
+        cpuInstructions: 0,
+        memoryBytes: 0,
+        minResourceFee: 0,
+      };
+    }
     setRuns((prev) => [newRun, ...prev]);
   }, []);
 
@@ -595,6 +612,7 @@ function HomeContent() {
           runs={paginatedRuns} 
           onSelectRun={handleOpenRunDrawer} 
           onViewReport={setReportRun} 
+          onReplayRun={handleReplayComplete}
           visibleColumns={visibleColumns}
         />
         {dataState === 'loading' && (
