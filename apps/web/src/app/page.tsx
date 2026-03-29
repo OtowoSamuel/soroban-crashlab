@@ -47,6 +47,7 @@ import RunSeverityFilter from './add-run-filtering-by-severity';
 import AddRunTimeline from './add-run-timeline';
 import OnboardingChecklistModal from './implement-onboarding-checklist-modal-component';
 import FailureClassificationTaxonomy from './add-failure-classification-taxonomy';
+import AddAFuzzyQueryBuilderPage51 from './add-a-fuzzy-query-builder-page-51';
 
 // Mock data for demonstration
 const MOCK_RUNS: FuzzingRun[] = Array.from({ length: 25 }, (_, i) => ({
@@ -418,6 +419,11 @@ function HomeContent() {
       {/* Run workflow board section */}
       <div className="w-full mb-12">
         <ImplementRunWorkflowBoardPage58 runs={runs} />
+      </div>
+
+      {/* Fuzzy query builder section */}
+      <div className="w-full mb-12">
+        <AddAFuzzyQueryBuilderPage51 runs={runs} />
       </div>
       {/* Cross-run board widgets section — maintainer only */}
       {isMaintainer && (
