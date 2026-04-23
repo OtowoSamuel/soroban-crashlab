@@ -89,6 +89,19 @@ Review inside 24 hours to prevent unnecessary automated appeals. Review in this 
 4. Test coverage
 5. Clarity and maintainability
 
+## Secret scanning expectation for reviews
+
+Use the [Security Policy pre-commit secret scanning path](.github/SECURITY.md#pre-commit-secret-scanning-expectations) when a PR touches config files, environment examples, logs, fixtures, copied command output, or any material that could contain credentials.
+
+### Review requirements
+
+1. Confirm the contributor ran at least one recommended scanner (`gitleaks` or `trufflehog`) before opening or updating the PR.
+2. If a scanner finding was a false positive, confirm the PR or maintainer discussion names the scanner and file path without pasting the full matched value.
+3. If a real secret was found after push, move the response into a private channel immediately and require credential rotation or revocation before normal public review continues.
+4. Confirm the contributor removed any exposed value from the branch diff and local history before approving follow-up changes.
+
+Known boundary: this repository documents secret scanning expectations but does not yet ship an enforced pre-commit hook or CI secret scanner. Reviewer follow-through is still required.
+
 ## Release management
 
 Use [`docs/RELEASE_PROCESS.md`](docs/RELEASE_PROCESS.md) whenever you need to
@@ -123,6 +136,8 @@ environment mismatches instead of guesswork.
 ## Security Policy
 
 The project's coordinated vulnerability disclosure process and response expectations are defined in [`.github/SECURITY.md`](.github/SECURITY.md). Maintainers are responsible for triaging incoming reports within the timelines specified there.
+
+Pre-commit secret scanning expectations and remediation steps are defined in [`.github/SECURITY.md#pre-commit-secret-scanning-expectations`](.github/SECURITY.md#pre-commit-secret-scanning-expectations). If a suspected secret reaches a remote branch or shared artifact, move the response to a private report before continuing normal public review.
 
 ## Operational Security Assumptions
 
@@ -209,6 +224,17 @@ bash scripts/check-sla.sh
 The script lists open PRs with no review past 24 h and assigned issues
 with no update past 48 h. It exits non-zero when breaches are found so
 it can be wired into a CI schedule.
+
+### Running the secret scanning policy check
+
+Use the focused policy test when secret-scanning guidance or remediation steps change:
+
+```bash
+cd apps/web
+npm run test:policy
+```
+
+The test verifies the documented scanner recommendations, private-report escalation path, remediation guidance, and PR validation text.
 
 ## Post-resolution feedback
 
