@@ -1,19 +1,17 @@
-Closes #<issue-number>
+# feat: Add conflict-of-interest maintainer policy
 
+Closes #437 
 ## Summary
 
-Adds resume-from-checkpoint support for interrupted campaigns in `crashlab-core` without changing the existing non-resume run path. The runtime now validates persisted checkpoints against the requested campaign and schedule length, resumes from the last accounted global seed index, and preserves deterministic worker-partition behavior by using one checkpoint cursor per worker.
+Defines the conflict-of-interest control path for issue assignment, PR review, merge, security triage, disclosure, and resolution-credit decisions. The policy is documented in the security policy and maintainer playbook, with contributor guidance for raising known conflicts without leaking private vulnerability details.
 
 ## What changed
 
-- Added `RunCheckpoint::validate_run` and campaign-mismatch validation to make resume compatibility explicit before work starts.
-- Added `RunResumeError`, `drive_run_from_checkpoint`, and `drive_run_partitioned_from_checkpoint` to `run_control.rs`.
-- Kept the existing `drive_run` and `drive_run_partitioned` entry points unchanged to avoid regressions in adjacent runtime flows.
-- Updated checkpoint docs in `README.md` and `docs/REPRODUCIBILITY.md` to describe per-worker checkpoint files, deterministic resume semantics, and the current no-file-locking limitation.
-- Added focused unit coverage in `checkpoint.rs` and `run_control.rs`.
-- Added regression/integration tests:
-  - `contracts/crashlab-core/tests/run_resume_from_checkpoint.rs`
-  - `contracts/crashlab-core/tests/run_resume_partitioned_checkpoint.rs`
+- Added conflict-of-interest handling to `.github/SECURITY.md`, including required recusal path, timelines, risks, and mitigation boundaries.
+- Linked the policy from `MAINTAINER_WAVE_PLAYBOOK.md` and documented the maintainer verification command.
+- Added contributor disclosure guidance to `CONTRIBUTING.md`.
+- Added `maintainer-conflict-policy.ts` with a pure policy evaluator for allowed decisions, recusal-required decisions, SLA timelines, and handle-normalization edge cases.
+- Added focused policy tests and wired them into `npm run test` plus CI.
 
 ## Validation
 
@@ -24,42 +22,28 @@ rg -n "TODO|TBD" README.md CONTRIBUTING.md MAINTAINER_WAVE_PLAYBOOK.md .github/S
 Expected: no unresolved placeholder output.
 
 ```bash
-cd contracts/crashlab-core
-cargo test --test run_resume_from_checkpoint
-cargo test --test run_resume_partitioned_checkpoint
+cd apps/web
+npm run test:policy
+npm run test
 ```
 
-Expected:
-- interrupted single-worker run resumes from the saved checkpoint without replaying completed seeds
-- partitioned worker resume advances the global cursor without rescanning earlier work
-- checkpoint campaign mismatch is rejected before work starts
+Expected: policy checks pass, including primary allowed flow, conflict recusal flow, security-triage edge behavior, and documentation cross-links.
 
 ```bash
-cd contracts/crashlab-core
-cargo test --all-targets
+cd apps/web
+npm run lint
+npm run build
 ```
 
-Expected: currently blocked by pre-existing unrelated compile failures in `src/threat_model_tests.rs`; see local output summary.
+Expected: frontend lint/build remain green for impacted surfaces.
 
 ## Local Output Summary
 
-- `rg -n "TODO|TBD" README.md CONTRIBUTING.md MAINTAINER_WAVE_PLAYBOOK.md .github/SECURITY.md || true`: no output
-- `git diff --check`: passed
-- `cd contracts/crashlab-core && cargo test --test run_resume_from_checkpoint`: passed
-- `cd contracts/crashlab-core && cargo test --test run_resume_partitioned_checkpoint`: passed
-- `cd contracts/crashlab-core && cargo test --all-targets`: failed in pre-existing unrelated `src/threat_model_tests.rs` compile debt, including stale references such as:
-  - `load_case_bundle_json`
-  - removed `FailureClass` variants (`Storage`, `Arithmetic`, `Context`, `Object`, `Crypto`, `Events`)
-  - removed constructors like `RetentionPolicy::new`, `RunCheckpoint::new`, and `WorkerPartition::new`
-
-## Design Note
-
-- Tradeoff: I added resume-specific APIs instead of changing `drive_run` / `drive_run_partitioned` in place. That keeps existing callers stable and makes the checkpointed control path explicit at the callsite.
-- Alternative considered: baking checkpoint persistence directly into the run loop. I left persistence as a caller concern so replay, bundle persistence, and health-reporting interfaces stay decoupled from filesystem I/O.
-- Rollback path: remove the new resume-specific APIs/tests/docs and callers fall back to the original start-from-zero run path.
+- `rg -n "TODO|TBD" README.md CONTRIBUTING.md MAINTAINER_WAVE_PLAYBOOK.md .github/SECURITY.md || true`: no output.
+- `jq empty apps/web/package.json`: passed.
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml"); puts "ci yaml ok"'`: `ci yaml ok`.
+- `npm run test:policy`, `npm run test`, `npm run lint`, and `npm run build`: not executed in this local shell because `node` and `npm` are unavailable (`which node` and `which npm` returned not found). CI now runs `npm run test` between lint and build.
 
 ## Notes for Maintainers
 
-- Use one checkpoint file per worker when resuming partitioned campaigns.
-- Checkpoint files are still not file-locked; concurrent writers can overwrite each other's progress.
-- The resume cursor advances only after a seed index is fully accounted for, so cancellation and failure leave the next unprocessed seed in place for a deterministic retry.
+The automated policy check validates documented timers and handle-based self-assignment/self-review conflicts. It does not detect private employment, sponsor, financial, or close-collaboration relationships; those still require self-disclosure and reviewer escalation per the policy.
