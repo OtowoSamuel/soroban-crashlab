@@ -33,6 +33,8 @@ pub enum FailureClass {
     OversizedInput,
     /// Raw failure did not match any known category.
     Unknown,
+    /// Simulation attempt exceeded the configured timeout threshold.
+    Timeout,
 }
 
 impl FailureClass {
@@ -49,11 +51,12 @@ impl FailureClass {
             FailureClass::EmptyInput => "empty-input",
             FailureClass::OversizedInput => "oversized-input",
             FailureClass::Unknown => "unknown",
+            FailureClass::Timeout => "timeout",
         }
     }
 
     /// All variants in declaration order, useful for iteration and reporting.
-    pub const ALL: [FailureClass; 7] = [
+    pub const ALL: [FailureClass; 8] = [
         FailureClass::Auth,
         FailureClass::Budget,
         FailureClass::State,
@@ -61,6 +64,7 @@ impl FailureClass {
         FailureClass::EmptyInput,
         FailureClass::OversizedInput,
         FailureClass::Unknown,
+        FailureClass::Timeout,
     ];
 }
 
@@ -247,8 +251,8 @@ mod tests {
     }
 
     #[test]
-    fn all_contains_seven_variants() {
-        assert_eq!(FailureClass::ALL.len(), 7);
+    fn all_contains_eight_variants() {
+        assert_eq!(FailureClass::ALL.len(), 8);
     }
 
     // ── group_by_class ───────────────────────────────────────────────────────
