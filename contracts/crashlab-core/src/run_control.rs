@@ -146,12 +146,6 @@ where
 {
     let mut seeds_processed = 0u64;
     for seed_index in 0..total_seeds {
-        if let Some(p) = &partition {
-            if !p.owns_seed(seed_index) {
-                continue;
-            }
-        }
-
         if signal.is_cancelled() {
             return RunTerminalState::Cancelled {
                 summary: RunSummary {
@@ -159,6 +153,12 @@ where
                     cancelled_at_seed: Some(seed_index),
                 },
             };
+        }
+
+        if let Some(p) = &partition {
+            if !p.owns_seed(seed_index) {
+                continue;
+            }
         }
         if let Err(message) = work(seed_index) {
             return RunTerminalState::Failed { message };
@@ -377,6 +377,45 @@ mod tests {
                 assert_eq!(summary.cancelled_at_seed, Some(0));
             }
             other => panic!("expected cancelled, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn drive_run_with_partition_observes_cancel_at_global_index() {
+        let id = RunId(12);
+        let signal = CancelSignal::new(id);
+        signal.cancel();
+
+        // Worker 1 of 3 does not own seed 0, but cancellation should still be
+        // observed at global index 0 before ownership filtering.
+        let partition = WorkerPartition::try_new(1, 3).expect("partition");
+        let outcome = drive_run(id, 20, &signal, Some(partition), |_i| Ok(()));
+        match outcome {
+            RunTerminalState::Cancelled { summary } => {
+                assert_eq!(summary.seeds_processed, 0);
+                assert_eq!(summary.cancelled_at_seed, Some(0));
+            }
+            other => panic!("expected cancelled, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn drive_run_returns_failed_state_with_message() {
+        let id = RunId(13);
+        let signal = CancelSignal::new(id);
+
+        let outcome = drive_run(id, 8, &signal, None, |i| {
+            if i == 3 {
+                return Err("simulated failure".to_string());
+            }
+            Ok(())
+        });
+
+        match outcome {
+            RunTerminalState::Failed { message } => {
+                assert_eq!(message, "simulated failure");
+            }
+            other => panic!("expected failed, got {other:?}"),
         }
     }
 }
