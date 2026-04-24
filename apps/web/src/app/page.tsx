@@ -218,6 +218,7 @@ function HomeContent() {
     ? ((searchParams.get("severity") ?? "all") as "all" | RunSeverity)
     : "all";
   const expensiveOnly = searchParams.get("expensive") === "1";
+  const reportRunId = searchParams.get("report");
   const pageParam = Number.parseInt(searchParams.get("page") ?? "1", 10);
   const currentPage =
     Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
@@ -357,13 +358,41 @@ function HomeContent() {
     }
   }, [clampedPage, currentPage, setQueryState]);
 
+  useEffect(() => {
+    if (reportRunId && !reportRun) {
+      const run = runs.find(r => r.id === reportRunId);
+      if (run) {
+        setReportRun(run);
+      } else if (dataState === "success") {
+        // Clear param if run not found after data loaded
+        setQueryState({ report: null });
+      }
+    }
+  }, [reportRun, reportRunId, runs, dataState, setQueryState]);
+
   const handleOpenRunDrawer = useCallback(
-    (runId: string) => setQueryState({ run: runId }),
+    (runId: string) => setQueryState({ run: runId, report: null }),
     [setQueryState],
   );
 
   const handleCloseRunDrawer = useCallback(
     () => setQueryState({ run: null }),
+    [setQueryState],
+  );
+
+  const handleOpenReport = useCallback(
+    (run: FuzzingRun) => {
+      setReportRun(run);
+      setQueryState({ report: run.id, run: null });
+    },
+    [setQueryState],
+  );
+
+  const handleCloseReport = useCallback(
+    () => {
+      setReportRun(null);
+      setQueryState({ report: null });
+    },
     [setQueryState],
   );
 
@@ -869,7 +898,7 @@ function HomeContent() {
             <RunHistoryTable
               runs={paginatedRuns}
               onSelectRun={handleOpenRunDrawer}
-              onViewReport={setReportRun}
+              onViewReport={handleOpenReport}
               onReplayRun={handleReplayComplete}
               visibleColumns={visibleColumns}
               selectedRunIds={selectedRunIds}
@@ -969,7 +998,7 @@ function HomeContent() {
                   runs={filteredRuns}
                   viewportHeight={480}
                   onSelectRun={handleOpenRunDrawer}
-                  onViewReport={setReportRun}
+                  onViewReport={handleOpenReport}
                   visibleColumns={visibleColumns}
                 />
               </div>
@@ -1150,7 +1179,7 @@ function HomeContent() {
           {reportRun && (
             <ReportModal
               isOpen={true}
-              onClose={() => setReportRun(null)}
+              onClose={handleCloseReport}
               markdown={generateMarkdownReport(reportRun)}
               runId={reportRun.id}
             />
