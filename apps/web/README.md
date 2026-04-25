@@ -3,6 +3,23 @@ This is a [Next.js](https://nextjs.org) dashboard for Soroban CrashLab.
 ## Dashboard Notes
 
 - The home page includes a failure cluster view that groups failed runs by signature and context, then links each group to a representative sample run for triage.
+- Run->issue link integration tests use deterministic boundary contracts in `src/app/integrate-run-issue-link-integration-tests-utils.ts`.
+
+## Run->Issue Link Integration Contract
+
+The integration flow expects four externally provided boundaries:
+
+- `getRunById(runId)`: return run + existing issue links, or `null` if missing.
+- `getEnabledTrackerById(trackerId)`: return enabled tracker config, or `null` if unavailable.
+- `createRunIssueLink(...)`: persist and return created issue link payload.
+- `verifyIssueLink(link)`: return `{ reachable, statusCode }` from downstream issue system.
+
+Failure behavior is explicit and step-based:
+
+- Unknown run -> fail at `run-lookup`
+- Missing/disabled/invalid tracker -> fail at `tracker-lookup` / `tracker-validation`
+- Duplicate run->issue link -> fail at `dedupe-check`
+- Downstream issue endpoint failure (`reachable=false` or `statusCode>=400`) -> fail at `link-verify`
 
 ## Getting Started
 
