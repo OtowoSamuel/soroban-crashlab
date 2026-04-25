@@ -105,6 +105,19 @@ Review inside 24 hours to prevent unnecessary automated appeals. Review in this 
 4. Test coverage
 5. Clarity and maintainability
 
+## Secret scanning expectation for reviews
+
+Use the [Security Policy pre-commit secret scanning path](.github/SECURITY.md#pre-commit-secret-scanning-expectations) when a PR touches config files, environment examples, logs, fixtures, copied command output, or any material that could contain credentials.
+
+### Review requirements
+
+1. Confirm the contributor ran at least one recommended scanner (`gitleaks` or `trufflehog`) before opening or updating the PR.
+2. If a scanner finding was a false positive, confirm the PR or maintainer discussion names the scanner and file path without pasting the full matched value.
+3. If a real secret was found after push, move the response into a private channel immediately and require credential rotation or revocation before normal public review continues.
+4. Confirm the contributor removed any exposed value from the branch diff and local history before approving follow-up changes.
+
+Known boundary: this repository documents secret scanning expectations but does not yet ship an enforced pre-commit hook or CI secret scanner. Reviewer follow-through is still required.
+
 ## Release management
 
 Use [`docs/RELEASE_PROCESS.md`](docs/RELEASE_PROCESS.md) whenever you need to
@@ -172,7 +185,7 @@ When reviewing changes to artifact storage:
 ### CI security checks
 - **Existing checks**:
   - Rust: `cargo test --all-targets` (compilation and unit tests)
-  - Web: `npm run lint` and `npm run build`
+  - Web: `npm run test`, `npm run lint`, and `npm run build`
 - **Missing checks** (gaps):
   - Dependency vulnerability scanning for Rust (`cargo audit`) and npm (`npm audit`).
   - Security-focused linter rules (e.g., `cargo clippy` with `--deny=unsafe_code` or similar).

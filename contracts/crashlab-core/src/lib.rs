@@ -3,6 +3,7 @@ pub mod health;
 pub mod prng;
 pub mod reproducer;
 pub mod retry;
+pub mod signature_hash;
 pub mod taxonomy;
 
 pub use auth_matrix::{AuthMode, MatrixReport, ModeResult, collect_mismatched, run_matrix};
@@ -15,6 +16,7 @@ pub use reproducer::{
     shrink_seed_preserving_signature,
 };
 pub use retry::{RetryConfig, SimulationError, execute_with_retry};
+pub use signature_hash::{SignatureHasher, hash_category_payload};
 pub use taxonomy::{
     FailureClass, classify_failure, group_by_class, stable_failure_class_for_bundle,
 };
@@ -56,6 +58,8 @@ pub use bundle_persist::{
     read_case_bundle_json, save_case_bundle_json, write_case_bundle_json,
 };
 
+pub mod run_metadata;
+pub use run_metadata::{RunMetadata, MetadataPersistError, RUN_METADATA_SCHEMA_VERSION, SUPPORTED_METADATA_SCHEMAS};
 pub mod artifact_compress;
 pub use artifact_compress::{compress_artifact, decompress_artifact};
 
@@ -102,8 +106,8 @@ pub use retention::{RetentionPolicy, RetentionRecord};
 
 pub mod scenario_export;
 pub use scenario_export::{
-    FailureScenario, export_crash_report_markdown, export_rust_regression_fixture,
-    export_scenario_json, export_suite_json,
+    FailureScenario, export_crash_report_markdown, export_failing_seed_json,
+    export_rust_regression_fixture, export_scenario_json, export_suite_json,
 };
 
 pub mod regression_suite;
@@ -148,8 +152,10 @@ pub use worker_partition::{WorkerPartition, WorkerPartitionError, worker_for_see
 
 pub mod run_control;
 pub use run_control::{
-    CancelSignal, RunId, RunSummary, RunTerminalState, cancel_marker_path, cancel_requested,
-    clear_cancel_request, default_state_dir, drive_run, drive_run_partitioned, request_cancel_run,
+    CancelSignal, RunId, RunResumeError, RunSummary, RunTerminalState, cancel_marker_path,
+    cancel_requested, clear_cancel_request, default_state_dir, drive_run,
+    drive_run_from_checkpoint, drive_run_partitioned, drive_run_partitioned_from_checkpoint,
+    request_cancel_run,
 };
 
 pub mod rpc_envelope;

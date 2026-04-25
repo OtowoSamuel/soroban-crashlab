@@ -37,6 +37,8 @@ pub enum FailureClass {
     OversizedInput,
     /// Raw failure did not match any known category.
     Unknown,
+    /// Simulation attempt exceeded the configured timeout threshold.
+    Timeout,
 }
 
 impl FailureClass {
@@ -54,6 +56,7 @@ impl FailureClass {
             FailureClass::EmptyInput => "empty-input",
             FailureClass::OversizedInput => "oversized-input",
             FailureClass::Unknown => "unknown",
+            FailureClass::Timeout => "timeout",
         }
     }
 
@@ -67,6 +70,7 @@ impl FailureClass {
         FailureClass::EmptyInput,
         FailureClass::OversizedInput,
         FailureClass::Unknown,
+        FailureClass::Timeout,
     ];
 
     /// Parses a persisted category label into a stable failure class.

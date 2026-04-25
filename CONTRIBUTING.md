@@ -75,11 +75,11 @@ dependencies or the lockfile.
 
 ### 6. Run web verification
 
-The web app does not currently have a dedicated test runner. Use the same
-checks referenced by the maintainer playbook:
+Use the same checks referenced by the maintainer playbook:
 
 ```bash
 cd apps/web
+npm run test
 npm run lint
 npm run build
 ```
