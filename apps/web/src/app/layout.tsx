@@ -19,7 +19,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`antialiased min-h-screen flex flex-col`}
+      <body
+        className={`antialiased min-h-screen flex flex-col`}
         style={{ background: "var(--background)", color: "var(--foreground)" }}
       >
         <header
@@ -36,6 +37,12 @@ export default function RootLayout({
           <div className="flex items-center gap-4">
             <nav className="flex gap-4 text-sm font-medium">
               <Link
+                href="/"
+                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link
                 href="/logs"
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
@@ -48,39 +55,23 @@ export default function RootLayout({
                 Triage
               </Link>
               <Link
-                href="/settings/accessibility"
+                href="/trends"
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
-                Keyboard Nav
+                Trends
+              </Link>
+              <Link
+                href="/maintainer"
+                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                Maintainer
               </Link>
               <Link
                 href="/settings/alerting"
                 className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
-                Alerts
+                Settings
               </Link>
-              <Link
-                href="/#reporting-templates"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-              >
-                Templates
-              </Link>
-              <a
-                href="https://github.com/SorobanCrashLab/soroban-crashlab"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                GitHub
-              </a>
-              <a
-                href="https://github.com/SorobanCrashLab/soroban-crashlab/issues"
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open Issues
-              </a>
             </nav>
             <NotificationCenter />
             <DarkModeToggle />
