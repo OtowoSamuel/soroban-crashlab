@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildMockRuns } from '@/app/mockRuns';
 import type { FuzzingRun } from '@/app/types';
+import { logger } from '@/lib/logger';
 
 /**
  * Resolves a single run by ID from the in-process mock store.
@@ -54,7 +55,7 @@ export async function GET(
     }
     return NextResponse.json(run);
   } catch (error) {
-    console.error('GET /api/runs/[id] failed:', error);
+    logger.error('GET /api/runs/[id] failed', { error });
     return NextResponse.json({ error: 'Failed to fetch run' }, { status: 500 });
   }
 }

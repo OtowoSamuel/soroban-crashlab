@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/integrations/prometheus/health
@@ -32,7 +33,7 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Unexpected error during Prometheus health check:', error);
+    logger.error('GET /api/integrations/prometheus/health failed', { error });
     return NextResponse.json(
       { status: 'error', message: 'An unexpected error occurred.' },
       { status: 500 }

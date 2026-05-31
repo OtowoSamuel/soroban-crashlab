@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 interface NotificationFeedItem {
   id: string;
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
   try {
     return NextResponse.json(await fetchNotificationsFeed(request, feedUrl));
   } catch (error) {
-    console.error('GET /api/notifications failed:', error);
+    logger.error('GET /api/notifications failed', { error });
     return NextResponse.json(buildEmptyFeed());
   }
 }

@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { buildMockRuns } from '../../../../mockRuns';
 import type { FuzzingRun } from '../../../../types';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -350,7 +351,7 @@ export async function POST(
       await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
     }
   } catch (error) {
-    console.error('POST /api/runs/[id]/replay failed:', error);
+    logger.error('POST /api/runs/[id]/replay failed', { error });
     return NextResponse.json(
       {
         ok: false,

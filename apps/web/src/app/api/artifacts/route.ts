@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { listArtifactMetadata } from '@/lib/artifact-fs-adapter';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/artifacts
@@ -14,7 +15,7 @@ export async function GET() {
       total: artifacts.length,
     });
   } catch (error) {
-    console.error('Failed to list artifacts:', error);
+    logger.error('GET /api/artifacts failed', { error });
     return NextResponse.json(
       { error: 'Failed to list artifacts' },
       { status: 500 },

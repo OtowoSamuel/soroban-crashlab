@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/auth/github/callback
@@ -21,20 +22,17 @@ export async function GET(request: NextRequest) {
   }
 
   if (!state) {
-    // State is strongly recommended for CSRF protection, though in a stub we might just log it.
-    console.warn('GitHub callback received without "state" parameter.');
+    logger.warn('GET /api/auth/github/callback: missing state parameter');
   }
 
   try {
     // 2. Simulate exchange of 'code' for an access token
-    // In a real implementation, this would be a POST request to https://github.com/login/oauth/access_token
-    console.log(`Exchanging code ${code} for access token...`);
+    logger.info('GET /api/auth/github/callback: exchanging code for access token', { code });
 
     // Simulate API latency
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // 3. Simulate fetching user profile with the access token
-    // Real: GET https://api.github.com/user
     const mockUser = {
       id: 123456,
       login: 'octocat',
@@ -42,15 +40,14 @@ export async function GET(request: NextRequest) {
       name: 'The Octocat',
     };
 
-    console.log(`Successfully authenticated user: ${mockUser.login}`);
+    logger.info('GET /api/auth/github/callback: authenticated user', { login: mockUser.login });
 
     // 4. Redirect user back to the dashboard with a success indicator
-    // In a real app, we would set a session cookie or JWT here.
     return NextResponse.redirect(new URL('/', request.url), {
       status: 302,
     });
   } catch (error) {
-    console.error('Error during GitHub OAuth callback processing:', error);
+    logger.error('GET /api/auth/github/callback failed', { error });
     return NextResponse.json(
       { error: 'An internal error occurred while processing the GitHub authentication.' },
       { status: 500 }

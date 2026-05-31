@@ -3,6 +3,7 @@ import {
   getArtifactById,
   deleteArtifactById,
 } from '@/lib/artifact-fs-adapter';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/artifacts/[id]
@@ -42,7 +43,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Failed to download artifact:', error);
+    logger.error('GET /api/artifacts/[id] failed', { error });
     return NextResponse.json(
       { error: 'Failed to download artifact' },
       { status: 500 },
@@ -82,7 +83,7 @@ export async function DELETE(
       message: 'Artifact deleted successfully',
     });
   } catch (error) {
-    console.error('Failed to delete artifact:', error);
+    logger.error('DELETE /api/artifacts/[id] failed', { error });
     return NextResponse.json(
       { error: 'Failed to delete artifact' },
       { status: 500 },
