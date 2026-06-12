@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useSyncExternalStore } from 'react';
 
 type Theme = 'light' | 'dark';
 const STORAGE_KEY = 'crashlab:theme';
@@ -17,42 +17,48 @@ const ThemeContext = createContext<ThemeContextType>({
   mounted: false,
 });
 
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'light';
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    if (saved === 'light' || saved === 'dark') return saved;
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  } catch { /* ignore */ }
+  return 'light';
+}
+
+function subscribeToMount(cb: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  // Trigger once on subscribe (post-hydration)
+  const id = requestAnimationFrame(() => cb());
+  return () => cancelAnimationFrame(id);
+}
+
+function getMountSnapshot(): boolean {
+  return typeof document !== 'undefined';
+}
+
+function getMountServerSnapshot(): boolean {
+  return false;
+}
+
 export function useTheme() {
   return useContext(ThemeContext);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      if (saved === 'light' || saved === 'dark') {
-        setTheme(saved);
-        document.documentElement.classList.toggle('dark', saved === 'dark');
-      } else {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(prefersDark ? 'dark' : 'light');
-        document.documentElement.classList.toggle('dark', prefersDark);
-      }
-    } catch {
-      // ignore
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    try {
-      document.documentElement.classList.toggle('dark', theme === 'dark');
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // ignore
-    }
-  }, [theme]);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const mounted = useSyncExternalStore(subscribeToMount, getMountSnapshot, getMountServerSnapshot);
 
   const toggle = useCallback(() => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+        document.documentElement.classList.toggle('dark', next === 'dark');
+      } catch { /* ignore */ }
+      return next;
+    });
   }, []);
 
   return (

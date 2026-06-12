@@ -174,7 +174,7 @@ export default function AlertingSettingsPage({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<AlertingSettingsSnapshot>;
       })
-      .then((snapshot) => applySnapshot(snapshot))
+      .then(applySnapshot)
       .catch(() => {
         setSettings(null);
         setErrorMessage('Unable to load alerting settings.');
@@ -183,9 +183,20 @@ export default function AlertingSettingsPage({
   }, [applySnapshot]);
 
   useEffect(() => {
-    scheduleLoad();
+    fetch(ALERTING_API_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<AlertingSettingsSnapshot>;
+      })
+      .then(applySnapshot)
+      .catch(() => {
+        setSettings(null);
+        setErrorMessage('Unable to load alerting settings.');
+        setLoadState('error');
+      });
+
     return clearSaveTimer;
-  }, [scheduleLoad, clearSaveTimer]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (statusMessage === null) return;

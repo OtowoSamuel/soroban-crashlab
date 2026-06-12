@@ -23,6 +23,5 @@ export {
   type SentryConnectionTestResult,
 };
 
-export default {
-  createSentryAdapter,
-};
+const instrumentation = { createSentryAdapter };
+export default instrumentation;

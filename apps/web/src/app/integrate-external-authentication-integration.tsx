@@ -117,7 +117,7 @@ export default function ExternalAuthenticationIntegration() {
       const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
 
       if (clientId) {
-        const state = Math.random().toString(36).slice(2);
+        const state = crypto.randomUUID();
         const redirectUri = `${window.location.origin}/api/auth/github/callback`;
         const params = new URLSearchParams({
           client_id: clientId,
@@ -126,7 +126,8 @@ export default function ExternalAuthenticationIntegration() {
           state,
         });
 
-        window.location.href = `https://github.com/login/oauth/authorize?${params.toString()}`;
+        const authUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+        window.location.assign(authUrl);
         return;
       }
     }
