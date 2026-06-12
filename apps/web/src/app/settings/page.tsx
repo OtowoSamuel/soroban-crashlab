@@ -4,63 +4,53 @@ import Link from 'next/link';
 
 export default function SettingsPage() {
   return (
-    <div className="p-6 space-y-8 crt-fade-in">
-      <div>
-        <h1 className="text-lg font-bold crt-text">Settings</h1>
-        <p className="text-xs mt-1" style={{ color: '#606060' }}>System configuration and preferences</p>
+    <div className="container-full px-6 py-6 fade-in">
+      <div className="mb-6">
+        <h1 className="heading-page">Settings</h1>
+        <p className="text-meta mt-1">System configuration and preferences</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="/settings/alerting" className="crt-card p-4 flex flex-col gap-2 hover:border-[#2a2a2a] transition">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold" style={{ color: '#c0c0c0' }}>Alerting</span>
-            <span className="crt-text text-xs">→</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {[
+          { href: '/settings/alerting', title: 'Alerting', desc: 'Configure notification presets and alert thresholds', icon: '◉' },
+          { href: '/settings/reporting', title: 'Reporting', desc: 'Report generation templates and export preferences', icon: '⊞' },
+          { href: '/settings/accessibility', title: 'Accessibility', desc: 'Keyboard navigation, screen reader and contrast settings', icon: '◈' },
+        ].map((item) => (
+          <Link key={item.href} href={item.href} className="card card-padding card-interactive flex items-start gap-4 text-decoration-none">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style={{ background: '#E7F0F9', color: '#0A66C2' }}>
+              {item.icon}
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold" style={{ color: '#191919' }}>{item.title}</h3>
+              <p className="text-meta mt-1">{item.desc}</p>
+            </div>
+            <span style={{ color: '#666666' }}>→</span>
+          </Link>
+        ))}
+        <div className="card card-padding flex items-start gap-4" style={{ opacity: 0.6 }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style={{ background: '#F0F0F0', color: '#666666' }}>
+            ⚙
           </div>
-          <span className="text-xs" style={{ color: '#606060' }}>Configure notification presets and alert thresholds</span>
-        </Link>
-
-        <Link href="/settings/reporting" className="crt-card p-4 flex flex-col gap-2 hover:border-[#2a2a2a] transition">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold" style={{ color: '#c0c0c0' }}>Reporting</span>
-            <span className="crt-text text-xs">→</span>
+          <div className="flex-1">
+            <h3 className="font-semibold" style={{ color: '#191919' }}>API Configuration</h3>
+            <p className="text-meta mt-1">Coming soon - Backend URL, rate limits and authentication</p>
           </div>
-          <span className="text-xs" style={{ color: '#606060' }}>Report generation templates and export preferences</span>
-        </Link>
-
-        <Link href="/settings/accessibility" className="crt-card p-4 flex flex-col gap-2 hover:border-[#2a2a2a] transition">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold" style={{ color: '#c0c0c0' }}>Accessibility</span>
-            <span className="crt-text text-xs">→</span>
-          </div>
-          <span className="text-xs" style={{ color: '#606060' }}>Keyboard navigation, screen reader and contrast settings</span>
-        </Link>
-
-        <div className="crt-card p-4 flex flex-col gap-2 opacity-60">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold" style={{ color: '#c0c0c0' }}>API Configuration</span>
-            <span className="text-xs" style={{ color: '#606060' }}>Coming Soon</span>
-          </div>
-          <span className="text-xs" style={{ color: '#606060' }}>Backend URL, rate limits and authentication</span>
         </div>
       </div>
 
-      <div className="crt-card p-4">
-        <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#606060' }}>Current Configuration</h3>
-        <div className="space-y-2 text-xs font-mono">
-          <div className="flex justify-between">
-            <span style={{ color: '#606060' }}>API URL</span>
-            <span style={{ color: '#c0c0c0' }}>{process.env.NEXT_PUBLIC_API_URL || 'Not configured (using mock data)'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span style={{ color: '#606060' }}>Environment</span>
-            <span style={{ color: '#c0c0c0' }}>{process.env.NEXT_PUBLIC_VERCEL_ENV || 'Development'}</span>
-          </div>
-          <div className="flex justify-between">
-            <span style={{ color: '#606060' }}>Mock Data</span>
-            <span style={{ color: process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== 'false' ? '#00ff41' : '#ff3355' }}>
-              {process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== 'false' ? 'Enabled' : 'Disabled'}
-            </span>
-          </div>
+      <div className="card card-padding">
+        <h3 className="font-semibold text-sm mb-4" style={{ color: '#666666' }}>Current Configuration</h3>
+        <div className="space-y-3">
+          {[
+            { label: 'API URL', value: process.env.NEXT_PUBLIC_API_URL || 'Not configured (using mock data)' },
+            { label: 'Environment', value: process.env.NEXT_PUBLIC_VERCEL_ENV || 'Development' },
+            { label: 'Mock Data', value: process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== 'false' ? 'Enabled' : 'Disabled', color: process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== 'false' ? '#057642' : '#CC1016' },
+          ].map((info) => (
+            <div key={info.label} className="flex justify-between items-center py-1">
+              <span className="text-meta">{info.label}</span>
+              <span className="text-sm font-medium" style={{ color: info.color || '#191919' }}>{info.value}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
