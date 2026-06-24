@@ -80,28 +80,29 @@ test.describe('Runs list', () => {
     await runsResponse;
 
     await expect(page.getByRole('heading', { name: 'Fuzzing Runs' })).toBeVisible();
-    await expect(page.getByText(`${mockRuns.length} Total Runs`)).toBeVisible();
+    await expect(page.getByText(`${mockRuns.length} Runs`)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Replay History' })).toBeVisible();
 
-    const table = page.getByRole('table');
-    await expect(table.getByRole('columnheader', { name: /run identifier/i })).toBeVisible();
+    const table = page.getByRole('table').first();
+    await expect(table.getByRole('columnheader', { name: /^ID$/i })).toBeVisible();
     await expect(table.getByRole('columnheader', { name: /status/i })).toBeVisible();
     await expect(table.getByRole('columnheader', { name: /severity/i })).toBeVisible();
 
     const rows = table.locator('tbody tr');
     await expect(rows).toHaveCount(mockRuns.length);
 
-    await expect(rows.nth(0)).toContainText('#1003');
-    await expect(rows.nth(0)).toContainText('running');
-    await expect(rows.nth(0)).toContainText('medium');
+    await expect(rows.nth(0)).toContainText('run-1001');
+    await expect(rows.nth(0)).toContainText('completed');
+    await expect(rows.nth(0)).toContainText('high');
 
-    await expect(rows.nth(1)).toContainText('#1002');
+    await expect(rows.nth(1)).toContainText('run-1002');
     await expect(rows.nth(1)).toContainText('failed');
     await expect(rows.nth(1)).toContainText('critical');
     await expect(rows.nth(1)).toContainText('18,200');
 
-    await expect(rows.nth(2)).toContainText('#1001');
-    await expect(rows.nth(2)).toContainText('completed');
-    await expect(rows.nth(2)).toContainText('high');
+    await expect(rows.nth(2)).toContainText('run-1003');
+    await expect(rows.nth(2)).toContainText('running');
+    await expect(rows.nth(2)).toContainText('medium');
   });
 
   test('shows an error state when the runs API fails and recovers after retry', async ({ page }) => {
@@ -140,6 +141,6 @@ test.describe('Runs list', () => {
     await retryResponse;
 
     await expect(page.getByRole('heading', { name: 'Fuzzing Runs' })).toBeVisible();
-    await expect(page.locator('tbody tr')).toHaveCount(mockRuns.length);
+    await expect(page.locator('table').first().locator('tbody tr')).toHaveCount(mockRuns.length);
   });
 });
