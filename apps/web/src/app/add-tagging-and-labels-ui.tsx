@@ -143,7 +143,7 @@ export default function AddTaggingAndLabelsUi({
         activeTag,
       ),
     );
-  }, [activeTag, labelsByRun, persistedTags, runs]);
+  }, [activeTag, persistedTags, runs]);
 
   const selectedLabels = selectedRun ? labelsByRun[selectedRun.id] ?? [] : [];
   const selectedPersistedTags = selectedRun
