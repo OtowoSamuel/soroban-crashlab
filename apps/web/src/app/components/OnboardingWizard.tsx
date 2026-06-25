@@ -220,7 +220,7 @@ export default function OnboardingWizard({ isOpen, onClose }: OnboardingWizardPr
                     Ready to explore CrashLab
                   </h3>
                   <p className="text-sm text-emerald-800 dark:text-emerald-200">
-                    You can reopen this wizard anytime from the dashboard by clicking the "Onboarding checklist" button.
+                    You can reopen this wizard anytime from the dashboard by clicking the &quot;Onboarding checklist&quot; button.
                   </p>
                 </div>
               </div>

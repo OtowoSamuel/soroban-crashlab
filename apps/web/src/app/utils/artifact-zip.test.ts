@@ -6,6 +6,7 @@ import { generateRunArtifactZip } from './artifact-zip';
 import type { FuzzingRun, LedgerStateChange } from '../types';
 
 // Import JSZip - use require for CommonJS compatibility
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const JSZip = require('jszip');
 
 const mockRun: FuzzingRun = {
