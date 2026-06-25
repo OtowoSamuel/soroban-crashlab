@@ -68,31 +68,37 @@ const fulfillRunsListRequest = async (page: Page, body: unknown, status = 200) =
   });
 };
 
+const openRunFromList = async (page: Page, runId: string) => {
+  await fulfillRunsListRequest(page, { runs: mockRuns, total: mockRuns.length });
+
+  const runsResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/runs' && response.status() === 200,
+  );
+
+  await page.goto('/runs');
+  await runsResponse;
+
+  await expect(page.getByRole('heading', { name: 'Fuzzing Runs' })).toBeVisible();
+
+  const tableContainer = page.getByRole('region', { name: 'Virtualized fuzzing run table' });
+  const targetRow = tableContainer.locator('tbody tr').filter({ hasText: runId });
+  await targetRow.getByRole('button', { name: runId }).click();
+
+  await expect(page).toHaveURL(new RegExp(`/runs/${runId.replace(/-/g, '\\-')}$`));
+};
+
 test.describe('Run detail navigation', () => {
   test('navigates from runs list to run detail page', async ({ page }) => {
-    await fulfillRunsListRequest(page, { runs: mockRuns, total: mockRuns.length });
+    await openRunFromList(page, 'run-1002');
 
-    const runsResponse = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === '/api/runs' && response.status() === 200,
-    );
-
-    await page.goto('/runs');
-    await runsResponse;
-
-    await expect(page.getByRole('heading', { name: 'Fuzzing Runs' })).toBeVisible();
-
-    const targetRow = page.locator('tbody tr').filter({ hasText: '#1002' });
-    await targetRow.getByRole('link', { name: /View/i }).click();
-
-    await expect(page).toHaveURL(/\/runs\/run-1002$/);
     await expect(page.getByRole('heading', { name: 'Run Details' })).toBeVisible();
     await expect(page.getByText('ID: run-1002')).toBeVisible();
     await expect(page.getByRole('link', { name: '← Back to Runs' })).toBeVisible();
   });
 
   test('navigates back from run detail to runs list', async ({ page }) => {
-    await page.goto('/runs/run-1001');
+    await openRunFromList(page, 'run-1001');
 
     await expect(page.getByRole('heading', { name: 'Run Details' })).toBeVisible();
     await expect(page.getByText('ID: run-1001')).toBeVisible();
@@ -105,9 +111,9 @@ test.describe('Run detail navigation', () => {
   });
 
   test('links to dashboard from run detail page', async ({ page }) => {
-    await page.goto('/runs/run-1001');
+    await openRunFromList(page, 'run-1001');
 
-    await page.locator('main').getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await page.locator('a.btn-outline', { hasText: 'Dashboard' }).click();
 
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
