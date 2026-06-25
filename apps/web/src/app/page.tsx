@@ -11,6 +11,7 @@ const AddTaggingAndLabelsUi = dynamic(
 );
 import { runMatchesTagFilter } from "./run-tags-utils";
 import { FuzzingRun } from "./types";
+import { dedupedFetchJson } from "../lib/request-dedup";
 
 const makeSuggestedLabels = (run: FuzzingRun): string[] => [
   run.area,
@@ -29,13 +30,10 @@ function DashboardContent() {
 
   useEffect(() => {
     let cancelled = false;
-    const ctrl = new AbortController();
     const load = async () => {
       setDataState("loading");
       try {
-        const res = await fetch("/api/runs", { signal: ctrl.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await dedupedFetchJson<{ runs?: FuzzingRun[] }>("/api/runs");
         if (!cancelled) {
           setRuns(data.runs ?? []);
           setDataState("success");
@@ -47,7 +45,6 @@ function DashboardContent() {
     void load();
     return () => {
       cancelled = true;
-      ctrl.abort();
     };
   }, []);
 

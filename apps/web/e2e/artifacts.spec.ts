@@ -262,7 +262,8 @@ test.describe('Artifact Upload/Download E2E', () => {
       await fileInput.setInputFiles(filePath);
 
       // Wait for upload to complete
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify artifact appears
       await waitForArtifactInList(page, testFileName);
