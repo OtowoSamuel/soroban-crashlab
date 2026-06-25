@@ -24,6 +24,7 @@
     "test:run-comparison-side-by-side": "npx tsc src/app/add-run-comparison-side-by-side-view-utils.ts src/app/add-run-comparison-side-by-side-view-utils.test.ts src/app/mockRuns.ts src/app/types.ts --module commonjs --target es2020 --rootDir src --outDir build/test-tmp --esModuleInterop && node build/test-tmp/app/add-run-comparison-side-by-side-view-utils.test.js && npx tsc src/app/add-run-comparison-side-by-side-view.integration.test.ts src/app/add-run-comparison-side-by-side-view-utils.ts src/app/mockRuns.ts src/app/types.ts --module commonjs --target es2020 --rootDir src --outDir build/test-tmp --esModuleInterop && node build/test-tmp/app/add-run-comparison-side-by-side-view.integration.test.js"
   },
   "dependencies": {
+    "jszip": "^3.10.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -32,7 +33,6 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
