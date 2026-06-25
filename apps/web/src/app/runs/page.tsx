@@ -6,6 +6,19 @@ import { FuzzingRun } from '../types';
 
 const ITEMS_PER_PAGE = 10;
 
+function formatRunIdentifier(runId: string): string {
+  const match = runId.match(/(\d+)\s*$/);
+  return match ? `#${match[1]}` : runId;
+}
+
+function sortRunsForDisplay(runs: FuzzingRun[]): FuzzingRun[] {
+  return [...runs].sort((left, right) => {
+    const leftStarted = left.startedAt ? Date.parse(left.startedAt) : 0;
+    const rightStarted = right.startedAt ? Date.parse(right.startedAt) : 0;
+    return rightStarted - leftStarted;
+  });
+}
+
 export default function RunsPage() {
   const [dataState, setDataState] = useState<'loading' | 'success' | 'error'>('loading');
   const [runs, setRuns] = useState<FuzzingRun[]>([]);
@@ -31,9 +44,10 @@ export default function RunsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(runs.length / ITEMS_PER_PAGE));
+  const sortedRuns = sortRunsForDisplay(runs);
+  const totalPages = Math.max(1, Math.ceil(sortedRuns.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedRuns = runs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const paginatedRuns = sortedRuns.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <div className="container-full page-padding fade-in">
@@ -44,7 +58,7 @@ export default function RunsPage() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           {dataState === 'success' && (
-            <span className="chip text-xs sm:text-sm">{runs.length} Runs</span>
+            <span className="chip text-xs sm:text-sm">{runs.length} Total Runs</span>
           )}
           <Link href="/" className="btn-outline text-xs sm:text-sm px-3 sm:px-6 h-8 sm:h-10">Dashboard</Link>
         </div>
@@ -82,10 +96,10 @@ export default function RunsPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>Run Identifier</th>
                 <th>Status</th>
                 <th className="hidden sm:table-cell">Area</th>
-                <th className="hidden sm:table-cell">Severity</th>
+                <th>Severity</th>
                 <th className="hidden md:table-cell">Duration</th>
                 <th className="hidden md:table-cell">Seeds</th>
                 <th></th>
@@ -94,10 +108,10 @@ export default function RunsPage() {
             <tbody>
               {paginatedRuns.map((run) => (
                 <tr key={run.id}>
-                  <td className="code-text text-meta" style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{run.id}</td>
+                  <td className="code-text text-meta" style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatRunIdentifier(run.id)}</td>
                   <td><span className={`badge badge-${run.status}`}>{run.status}</span></td>
                   <td className="hidden sm:table-cell">{run.area}</td>
-                  <td className="hidden sm:table-cell" style={{ color: run.severity === 'critical' ? '#C37D16' : run.severity === 'high' ? '#CC1016' : 'var(--text-primary)' }}>
+                  <td style={{ color: run.severity === 'critical' ? '#C37D16' : run.severity === 'high' ? '#CC1016' : 'var(--text-primary)' }}>
                     {run.severity}
                   </td>
                   <td className="hidden md:table-cell text-meta">{run.duration.toLocaleString()}ms</td>
