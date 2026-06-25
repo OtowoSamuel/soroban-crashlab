@@ -1,7 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const baseUrl = process.env.TEST_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000';
-
 const mockRuns = [
   {
     id: 'run-1001',
@@ -76,7 +74,7 @@ test.describe('Runs list', () => {
         new URL(response.url()).pathname === '/api/runs' && response.status() === 200,
     );
 
-    await page.goto(`${baseUrl}/runs`);
+    await page.goto('/runs');
     await runsResponse;
 
     await expect(page.getByRole('heading', { name: 'Fuzzing Runs' })).toBeVisible();
@@ -126,7 +124,7 @@ test.describe('Runs list', () => {
       });
     });
 
-    await page.goto(`${baseUrl}/runs`);
+    await page.goto('/runs');
 
     await expect(page.getByText('Failed to load fuzzing runs')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();

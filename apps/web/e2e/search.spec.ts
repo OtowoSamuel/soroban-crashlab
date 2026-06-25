@@ -1,7 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const baseUrl = process.env.TEST_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000';
-
 const mockRuns = [
   {
     id: 'run-1001',
@@ -56,7 +54,7 @@ test.describe('Search / Query Builder functionality', () => {
   });
 
   test('should navigate to search page from navbar and builder filters/saves queries', async ({ page }) => {
-    await page.goto(`${baseUrl}/`);
+    await page.goto('/');
     
     // 1. Navigation from navbar
     const searchBtn = page.locator('#navbar-search-link');

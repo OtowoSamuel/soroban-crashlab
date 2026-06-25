@@ -1,11 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-const baseUrl = process.env.TEST_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000';
-
 test.describe('Maintainer Mode Toggling', () => {
   test('should toggle maintainer mode and show/hide the maintainer tab', async ({ page }) => {
     // Navigate to Settings page
-    await page.goto(`${baseUrl}/settings`);
+    await page.goto('/settings');
 
     // Verify Settings heading
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
@@ -35,7 +33,7 @@ test.describe('Maintainer Mode Toggling', () => {
     await expect(page).toHaveURL(/.*\/maintainer/, { timeout: 15000 });
 
     // Go back to Settings page
-    await page.goto(`${baseUrl}/settings`);
+    await page.goto('/settings');
 
     // Toggle it off
     const toggleButtonOff = page.getByRole('switch', { name: 'Toggle maintainer mode' });
