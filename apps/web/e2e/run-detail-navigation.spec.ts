@@ -104,7 +104,7 @@ test.describe('Run detail navigation', () => {
     await expect(page.getByText('ID: run-1001')).toBeVisible();
     await expect(page.getByText('Issues found')).toBeVisible();
 
-    await page.locator('header').getByRole('link', { name: 'Runs' }).click();
+    await page.locator('a.top-nav-link[href="/runs"]').click();
 
     await expect(page).toHaveURL(/\/runs$/);
     await expect(page.getByRole('heading', { name: 'Fuzzing Runs' })).toBeVisible();
