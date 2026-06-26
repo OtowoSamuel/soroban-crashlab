@@ -14,6 +14,8 @@ import {
 import { FuzzingRun } from '../types';
 import { fetchRuns } from '../../lib/api-client';
 import VirtualizedRunTable from '../implement-virtualized-run-table-component';
+import AddRunReplayHistoryWithTimestamps from '../add-run-replay-history-with-timestamps';
+import AddRunReplayUi from '../add-run-replay-ui';
 
 const RUN_TABLE_COLUMNS = ['id', 'status', 'area', 'severity', 'duration', 'seedCount'];
 
