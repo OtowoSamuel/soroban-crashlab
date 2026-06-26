@@ -121,6 +121,7 @@ cargo build --release --target wasm32-unknown-unknown
 |----------|-------------|
 | [Architecture Guide](docs/ARCHITECTURE.md) | System architecture, data flow, and design decisions |
 | [Reproducibility Guide](docs/REPRODUCIBILITY.md) | Deterministic guarantees and troubleshooting |
+| [Roadmap](docs/ROADMAP.md) | Milestone overview and issue tracking |
 | [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) | Web app, API route, and deployment configuration reference |
 | [Release Process](docs/RELEASE_PROCESS.md) | Maintainer checklist for releases |
 | [Contributing Guide](CONTRIBUTING.md) | How to contribute to CrashLab |
