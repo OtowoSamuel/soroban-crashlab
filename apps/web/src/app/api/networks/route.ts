@@ -6,6 +6,7 @@ import {
   type NetworkConfig,
 } from "@/app/network-config-utils";
 import { getStore, setStore } from "./_store";
+import { errorResponse, createdResponse, successResponse, status } from '@/lib/api-response-utils';
 
 // Private slugify helper - server always generates id from name
 function slugify(name: string, existingNetworks: NetworkConfig[]): string {
@@ -32,11 +33,10 @@ function slugify(name: string, existingNetworks: NetworkConfig[]): string {
  */
 export async function GET() {
   const store = getStore();
-  return NextResponse.json({
+  return successResponse({
     networks: store.networks,
     activeNetworkId: store.activeNetworkId,
-    total: store.networks.length,
-  });
+  }, { total: store.networks.length });
 }
 
 /**
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    return errorResponse("Invalid JSON body.", status.badRequest);
   }
 
   if (
@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
     typeof (body as Record<string, unknown>).horizonUrl !== "string" ||
     typeof (body as Record<string, unknown>).rpcUrl !== "string"
   ) {
-    return NextResponse.json(
-      { error: "Missing required fields: name, networkPassphrase, horizonUrl, rpcUrl." },
-      { status: 400 },
+    return errorResponse(
+      "Missing required fields: name, networkPassphrase, horizonUrl, rpcUrl.",
+      status.badRequest
     );
   }
 
@@ -86,15 +86,15 @@ export async function POST(request: NextRequest) {
 
   const configError = validateNetworkConfig(candidate);
   if (configError) {
-    return NextResponse.json({ error: configError }, { status: 422 });
+    return errorResponse(configError, status.unprocessableEntity);
   }
 
   const storeError = validateNetworkStore(store, candidate);
   if (storeError) {
-    return NextResponse.json({ error: storeError }, { status: 409 });
+    return errorResponse(storeError, status.conflict);
   }
 
   setStore(addNetwork(store, candidate));
 
-  return NextResponse.json({ network: candidate }, { status: 201 });
+  return createdResponse({ network: candidate });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findNetworkById, removeNetwork, switchActiveNetwork } from "@/app/network-config-utils";
 import { getStore, setStore } from "../_store";
+import { successResponse, errorResponse, status } from '@/lib/api-response-utils';
 
 /**
  * DELETE /api/networks/[id]
@@ -16,13 +17,13 @@ export async function DELETE(
   const network = findNetworkById(store, id);
 
   if (!network) {
-    return NextResponse.json({ error: "Network not found." }, { status: 404 });
+    return errorResponse("Network not found.", status.notFound);
   }
 
   if (network.isBuiltIn) {
-    return NextResponse.json(
-      { error: "Built-in networks cannot be deleted." },
-      { status: 403 },
+    return errorResponse(
+      "Built-in networks cannot be deleted.",
+      status.forbidden
     );
   }
 
@@ -34,5 +35,5 @@ export async function DELETE(
 
   setStore(next);
 
-  return NextResponse.json({ success: true, deletedId: id });
+  return successResponse({ success: true, deletedId: id });
 }

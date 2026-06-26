@@ -4,6 +4,7 @@ import {
   deleteArtifactById,
 } from '@/lib/artifact-fs-adapter';
 import { logger } from '@/lib/logger';
+import { successResponse, errorResponse, status } from '@/lib/api-response-utils';
 
 /**
  * GET /api/artifacts/[id]
@@ -17,19 +18,13 @@ export async function GET(
     const { id } = await params;
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Artifact ID is required' },
-        { status: 400 },
-      );
+      return errorResponse('Artifact ID is required', status.badRequest);
     }
 
     const result = await getArtifactById(id);
 
     if (!result) {
-      return NextResponse.json(
-        { error: 'Artifact not found' },
-        { status: 404 },
-      );
+      return errorResponse('Artifact not found', status.notFound);
     }
 
     const { metadata, buffer } = result;
@@ -44,10 +39,7 @@ export async function GET(
     });
   } catch (error) {
     logger.error('GET /api/artifacts/[id] failed', { error });
-    return NextResponse.json(
-      { error: 'Failed to download artifact' },
-      { status: 500 },
-    );
+    return errorResponse('Failed to download artifact', status.internalError);
   }
 }
 
@@ -63,30 +55,18 @@ export async function DELETE(
     const { id } = await params;
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Artifact ID is required' },
-        { status: 400 },
-      );
+      return errorResponse('Artifact ID is required', status.badRequest);
     }
 
     const deleted = await deleteArtifactById(id);
 
     if (!deleted) {
-      return NextResponse.json(
-        { error: 'Artifact not found' },
-        { status: 404 },
-      );
+      return errorResponse('Artifact not found', status.notFound);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Artifact deleted successfully',
-    });
+    return successResponse({ success: true, message: 'Artifact deleted successfully' });
   } catch (error) {
     logger.error('DELETE /api/artifacts/[id] failed', { error });
-    return NextResponse.json(
-      { error: 'Failed to delete artifact' },
-      { status: 500 },
-    );
+    return errorResponse('Failed to delete artifact', status.internalError);
   }
 }

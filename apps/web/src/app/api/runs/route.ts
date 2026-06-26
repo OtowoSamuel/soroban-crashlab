@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { errorResponse, successResponse, status } from '@/lib/api-response-utils';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,25 +13,19 @@ export async function GET(request: Request) {
       });
       if (res.ok) {
         const data = await res.json();
-        return NextResponse.json(data);
+        return successResponse(data);
       }
     } catch {
-      return NextResponse.json(
-        { error: 'Backend unavailable', runs: [], total: 0 },
-        { status: 503 },
-      );
+      return errorResponse('Backend unavailable', status.serviceUnavailable);
     }
   }
 
   const enableMock = process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA !== 'false';
   if (!enableMock) {
-    return NextResponse.json(
-      { error: 'Mock data disabled and no backend configured', runs: [], total: 0 },
-      { status: 503 },
-    );
+    return errorResponse('Mock data disabled and no backend configured', status.serviceUnavailable);
   }
 
   const { buildMockRuns } = await import('@/app/mockRuns');
   const runs = buildMockRuns();
-  return NextResponse.json({ runs, total: runs.length });
+  return successResponse({ runs }, { total: runs.length });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findNetworkById, switchActiveNetwork } from "@/app/network-config-utils";
 import { getStore, setStore } from "../_store";
+import { successResponse, errorResponse, status } from '@/lib/api-response-utils';
 
 /**
  * GET /api/networks/active
@@ -10,7 +11,7 @@ export async function GET() {
   const store = getStore();
   const network = findNetworkById(store, store.activeNetworkId);
 
-  return NextResponse.json({ network, activeNetworkId: store.activeNetworkId });
+  return successResponse({ network, activeNetworkId: store.activeNetworkId });
 }
 
 /**
@@ -22,7 +23,7 @@ export async function PUT(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    return errorResponse("Invalid JSON body.", status.badRequest);
   }
 
   if (
@@ -30,9 +31,9 @@ export async function PUT(request: NextRequest) {
     body === null ||
     typeof (body as Record<string, unknown>).id !== "string"
   ) {
-    return NextResponse.json(
-      { error: "Missing required field: id." },
-      { status: 400 },
+    return errorResponse(
+      "Missing required field: id.",
+      status.badRequest
     );
   }
 
@@ -41,11 +42,11 @@ export async function PUT(request: NextRequest) {
   const network = findNetworkById(store, id);
 
   if (!network) {
-    return NextResponse.json({ error: "Network not found." }, { status: 404 });
+    return errorResponse("Network not found.", status.notFound);
   }
 
   const next = switchActiveNetwork(store, id);
   setStore(next);
 
-  return NextResponse.json({ activeNetworkId: next.activeNetworkId, network });
+  return successResponse({ activeNetworkId: next.activeNetworkId, network });
 }

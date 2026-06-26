@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listArtifactMetadata, saveArtifact } from '@/lib/artifact-fs-adapter';
 import { logger } from '@/lib/logger';
+import { successResponse, errorResponse, createdResponse, status } from '@/lib/api-response-utils';
 
 /**
  * GET /api/artifacts
@@ -10,16 +11,10 @@ export async function GET() {
   try {
     const artifacts = await listArtifactMetadata();
 
-    return NextResponse.json({
-      artifacts,
-      total: artifacts.length,
-    });
+    return successResponse({ artifacts }, { total: artifacts.length });
   } catch (error) {
     logger.error('GET /api/artifacts failed', { error });
-    return NextResponse.json(
-      { error: 'Failed to list artifacts' },
-      { status: 500 },
-    );
+    return errorResponse('Failed to list artifacts', status.internalError);
   }
 }
 
@@ -32,17 +27,14 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file');
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'file is required' }, { status: 400 });
+      return errorResponse('file is required', status.badRequest);
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const metadata = await saveArtifact(file.name, buffer);
-    return NextResponse.json(metadata, { status: 201 });
+    return createdResponse({ artifact: metadata });
   } catch (error) {
     logger.error('POST /api/artifacts failed', { error });
-    return NextResponse.json(
-      { error: 'Failed to upload artifact' },
-      { status: 500 },
-    );
+    return errorResponse('Failed to upload artifact', status.internalError);
   }
 }
