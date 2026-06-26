@@ -124,6 +124,7 @@ cargo build --release --target wasm32-unknown-unknown
 | [Roadmap](docs/ROADMAP.md) | Milestone overview and issue tracking |
 | [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) | Web app, API route, and deployment configuration reference |
 | [Release Process](docs/RELEASE_PROCESS.md) | Maintainer checklist for releases |
+| [Product Vision](docs/VISION.md) | 90% done criteria and roadmap alignment |
 | [Contributing Guide](CONTRIBUTING.md) | How to contribute to CrashLab |
 | [Security Policy](.github/SECURITY.md) | Vulnerability reporting and handling |
 
