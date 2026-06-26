@@ -288,7 +288,7 @@ const RunClusterVisualization: React.FC<RunClusterVisualizationProps> = ({
           <p className="text-zinc-500 dark:text-zinc-400 font-medium">
             No cluster data available.
           </p>
-          <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             Start a new campaign to see cluster visualization.
           </p>
         </div>
@@ -1096,12 +1096,14 @@ const ClusterDetails: React.FC<{
         <button
           onClick={onClose}
           className="p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          aria-label="Close cluster detail"
         >
           <svg
             className="w-5 h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
