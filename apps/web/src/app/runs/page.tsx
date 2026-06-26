@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import BulkActionsForRuns, { BulkAction } from '../add-bulk-actions-for-runs';
 import {
   applyBulkActionToRuns,
@@ -11,79 +12,57 @@ import {
   toggleRunSelection,
 } from '../runs-bulk-actions-utils';
 import { FuzzingRun } from '../types';
+import { fetchRuns } from '../../lib/api-client';
+import VirtualizedRunTable from '../implement-virtualized-run-table-component';
 
-const ITEMS_PER_PAGE = 10;
-
-function formatRunIdentifier(runId: string): string {
-  const match = runId.match(/(\d+)\s*$/);
-  return match ? `#${match[1]}` : runId;
-}
-
-function sortRunsForDisplay(runs: FuzzingRun[]): FuzzingRun[] {
-  return [...runs].sort((left, right) => {
-    const leftStarted = left.startedAt ? Date.parse(left.startedAt) : 0;
-    const rightStarted = right.startedAt ? Date.parse(right.startedAt) : 0;
-    return rightStarted - leftStarted;
-  });
-}
+const RUN_TABLE_COLUMNS = ['id', 'status', 'area', 'severity', 'duration', 'seedCount'];
 
 export default function RunsPage() {
+  const router = useRouter();
   const [dataState, setDataState] = useState<'loading' | 'success' | 'error'>('loading');
   const [runs, setRuns] = useState<FuzzingRun[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
   const [fetchAttempt, setFetchAttempt] = useState(0);
 
+  const goToRun = useCallback((runId: string) => {
+    router.push(`/runs/${runId}`);
+  }, [router]);
+
   useEffect(() => {
     let cancelled = false;
-    const ctrl = new AbortController();
-
     const load = async () => {
       setDataState('loading');
       try {
-        const res = await fetch('/api/runs', { signal: ctrl.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await fetchRuns();
         if (!cancelled) {
-          setRuns(data.runs ?? []);
+          const sorted = (data.runs ?? []).slice().sort((a: FuzzingRun, b: FuzzingRun) => {
+            const ta = a.queuedAt ?? a.startedAt ?? '';
+            const tb = b.queuedAt ?? b.startedAt ?? '';
+            return tb.localeCompare(ta);
+          });
+          setRuns(sorted);
           setDataState('success');
         }
       } catch {
         if (!cancelled) setDataState('error');
       }
     };
-
     void load();
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-    };
+    return () => { cancelled = true; };
   }, [fetchAttempt]);
-
-  const sortedRuns = sortRunsForDisplay(runs);
-  const totalPages = Math.max(1, Math.ceil(sortedRuns.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedRuns = sortedRuns.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  const paginatedRunIds = paginatedRuns.map((run) => run.id);
 
   const selectedRuns = useMemo(
     () => getSelectedRuns(runs, selectedRunIds),
     [runs, selectedRunIds],
   );
 
-  const allPageRunsSelected =
-    paginatedRunIds.length > 0 &&
-    paginatedRunIds.every((id) => selectedRunIds.has(id));
-  const somePageRunsSelected =
-    paginatedRunIds.some((id) => selectedRunIds.has(id)) && !allPageRunsSelected;
-
   const handleToggleRunSelection = useCallback((runId: string) => {
     setSelectedRunIds((prev) => toggleRunSelection(prev, runId));
   }, []);
 
-  const handleToggleAllRunsSelection = useCallback(() => {
-    setSelectedRunIds((prev) => toggleAllRunSelection(prev, paginatedRunIds));
-  }, [paginatedRunIds]);
+  const handleToggleAllRunsSelection = useCallback((runIds: string[]) => {
+    setSelectedRunIds((prev) => toggleAllRunSelection(prev, runIds));
+  }, []);
 
   const handleBulkAction = useCallback(
     (action: BulkAction, runIds: string[], data?: Record<string, unknown>) => {
@@ -99,11 +78,6 @@ export default function RunsPage() {
     },
     [],
   );
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    setSelectedRunIds(new Set());
-  };
 
   return (
     <div className="container-full page-padding fade-in">
@@ -125,7 +99,7 @@ export default function RunsPage() {
       </div>
 
       {dataState === 'loading' && (
-        <div className="card card-padding">
+        <div role="status" aria-live="polite" className="card card-padding">
           <div className="space-y-3 sm:space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex gap-2 sm:gap-4">
@@ -141,14 +115,9 @@ export default function RunsPage() {
       )}
 
       {dataState === 'error' && (
-        <div
-          className="card card-padding text-center py-8 sm:py-12"
-          style={{ borderLeft: '4px solid #CC1016' }}
-        >
+        <div role="alert" className="card card-padding text-center py-8 sm:py-12" style={{ borderLeft: '4px solid #CC1016' }}>
           <span className="text-2xl sm:text-3xl mb-2 sm:mb-3 block">⚠</span>
-          <p className="font-semibold" style={{ color: '#CC1016' }}>
-            Failed to load fuzzing runs
-          </p>
+          <p className="font-semibold" style={{ color: '#CC1016' }}>Failed to load fuzzing runs</p>
           <p className="text-meta mt-1 mb-3 sm:mb-4">Check your connection and try again.</p>
           <button
             type="button"
@@ -167,129 +136,17 @@ export default function RunsPage() {
             onAction={handleBulkAction}
             onClearSelection={() => setSelectedRunIds(new Set())}
           />
-
-          <div className="card table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th style={{ width: '40px' }}>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all runs on this page"
-                      checked={allPageRunsSelected}
-                      ref={(input) => {
-                        if (input) {
-                          input.indeterminate = somePageRunsSelected;
-                        }
-                      }}
-                      onChange={handleToggleAllRunsSelection}
-                      className="rounded border-gray-300"
-                    />
-                  </th>
-                  <th>Run Identifier</th>
-                  <th>Status</th>
-                  <th className="hidden sm:table-cell">Area</th>
-                  <th>Severity</th>
-                  <th className="hidden md:table-cell">Duration</th>
-                  <th className="hidden md:table-cell">Seeds</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedRuns.map((run) => (
-                  <tr
-                    key={run.id}
-                    className={selectedRunIds.has(run.id) ? 'bg-blue-50/40' : undefined}
-                  >
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={`Select run ${formatRunIdentifier(run.id)}`}
-                        checked={selectedRunIds.has(run.id)}
-                        onChange={() => handleToggleRunSelection(run.id)}
-                        className="rounded border-gray-300"
-                      />
-                    </td>
-                    <td
-                      className="code-text text-meta"
-                      style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                    >
-                      {formatRunIdentifier(run.id)}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${run.status}`}>{run.status}</span>
-                    </td>
-                    <td className="hidden sm:table-cell">{run.area}</td>
-                    <td
-                      style={{
-                        color:
-                          run.severity === 'critical'
-                            ? '#C37D16'
-                            : run.severity === 'high'
-                              ? '#CC1016'
-                              : 'var(--text-primary)',
-                      }}
-                    >
-                      {run.severity}
-                    </td>
-                    <td className="hidden md:table-cell text-meta">
-                      {run.duration.toLocaleString()}ms
-                    </td>
-                    <td className="hidden md:table-cell text-meta">
-                      {run.seedCount.toLocaleString()}
-                    </td>
-                    <td>
-                      <Link
-                        href={`/runs/${run.id}`}
-                        className="link text-xs sm:text-sm whitespace-nowrap"
-                      >
-                        View <span className="hidden sm:inline">Details</span> →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <VirtualizedRunTable
+            runs={runs}
+            viewportHeight={600}
+            visibleColumns={RUN_TABLE_COLUMNS}
+            onSelectRun={goToRun}
+            onViewReport={(run) => goToRun(run.id)}
+            selectedRunIds={selectedRunIds}
+            onToggleRunSelection={handleToggleRunSelection}
+            onToggleAllRunsSelection={handleToggleAllRunsSelection}
+          />
         </>
-      )}
-
-      {dataState === 'success' && totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
-          <span className="text-meta text-xs sm:text-sm">
-            Page {currentPage} of {totalPages}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="btn-outline text-xs sm:text-sm"
-              style={{
-                padding: '0 12px sm:0 16px',
-                height: '32px sm:36px',
-                fontSize: '13px sm:14px',
-                opacity: currentPage === 1 ? 0.4 : 1,
-              }}
-            >
-              ← Prev
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="btn-outline text-xs sm:text-sm"
-              style={{
-                padding: '0 12px sm:0 16px',
-                height: '32px sm:36px',
-                fontSize: '13px sm:14px',
-                opacity: currentPage === totalPages ? 0.4 : 1,
-              }}
-            >
-              Next →
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
