@@ -4,16 +4,9 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ArtifactPreviewModal from './implement-artifact-preview-modal-component';
 import { useDebounce } from '../lib/useDebounce';
 import { api } from '../lib/api-client';
+import type { Artifact } from './types';
 
-export interface Artifact {
-  id: string;
-  name: string;
-  type: 'seed' | 'log' | 'trace' | 'coverage' | 'bundle';
-  size: number;
-  updatedAt: string;
-  runId?: string;
-  content_hash?: string;
-}
+export type { Artifact };
 
 const MOCK_ARTIFACTS: Artifact[] = [
   { id: 'art-001', name: 'seed_2026_03_29_001.bin', type: 'seed', size: 1024 * 45, updatedAt: '2026-03-29T10:00:00Z', runId: 'run-1000', content_hash: 'a1b2c3d4' },
