@@ -1,4 +1,4 @@
-import { safeStorageGet, safeStorageRemove, safeStorageSet } from './local-storage';
+import { safeStorage } from "./local-storage";
 
 export interface FeatureFlag {
   name: string;
@@ -23,24 +23,25 @@ export type FlagKey = keyof typeof FLAGS;
 
 const STORAGE_PREFIX = 'crashlab:flag:';
 
-function parseBoolean(val: string | null): boolean | null {
+function getUrlOverride(flag: FlagKey): boolean | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const val = params.get(`flag:${flag}`);
   if (val === 'true') return true;
   if (val === 'false') return false;
   return null;
 }
 
-function getUrlOverride(flag: FlagKey): boolean | null {
+function getLocalStorageOverride(flag: FlagKey): boolean | null {
   if (typeof window === 'undefined') return null;
   try {
-    return parseBoolean(new URLSearchParams(window.location.search).get(`flag:${flag}`));
+    const val = safeStorage.getItem(STORAGE_PREFIX + flag);
+    if (val === 'true') return true;
+    if (val === 'false') return false;
   } catch {
-    return null;
+    // localStorage may be unavailable
   }
-}
-
-function getLocalStorageOverride(flag: FlagKey): boolean | null {
-  // Blocked/throwing storage falls back to the flag default.
-  return parseBoolean(safeStorageGet('localStorage', STORAGE_PREFIX + flag));
+  return null;
 }
 
 export function isEnabled(flag: FlagKey): boolean {
@@ -54,11 +55,21 @@ export function isEnabled(flag: FlagKey): boolean {
 }
 
 export function setFlag(flag: FlagKey, value: boolean): void {
-  safeStorageSet('localStorage', STORAGE_PREFIX + flag, String(value));
+  if (typeof window === 'undefined') return;
+  try {
+    safeStorage.setItem(STORAGE_PREFIX + flag, String(value));
+  } catch {
+    // localStorage may be unavailable
+  }
 }
 
 export function clearFlag(flag: FlagKey): void {
-  safeStorageRemove('localStorage', STORAGE_PREFIX + flag);
+  if (typeof window === 'undefined') return;
+  try {
+    safeStorage.removeItem(STORAGE_PREFIX + flag);
+  } catch {
+    // localStorage may be unavailable
+  }
 }
 
 export function getEnabledFlags(): FlagKey[] {
